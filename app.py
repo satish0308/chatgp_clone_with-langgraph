@@ -113,7 +113,7 @@ if user_input:
         st.markdown(user_input)
 
     # Call model for response
-    model_output = call_my_model(user_input)
+    model_output = call_my_model(user_input,st.session_state.active_thread)
 
     # Add assistant message
     st.session_state.threads[st.session_state.current_user][thread_id].append({

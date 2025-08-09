@@ -37,7 +37,7 @@ os.environ['NVIDIA_API_KEY']=api_key
 
 uri = f"mongodb+srv://hiremath0308:{mango_db_password}@mycluster.ug67j.mongodb.net/?retryWrites=true&w=majority&appName=mycluster"
 
-def call_my_model(user_input_message):
+def call_my_model(user_input_message,thread_id):
 
     with MongoDBSaver.from_conn_string(uri) as checkpointer:
         graph=StateGraph(MyState,context_schema=myruntime)
@@ -63,7 +63,7 @@ def call_my_model(user_input_message):
                 "end_point": end_point}
 
 
-        config={"configurable": {"thread_id": "1"}}
+        config={"configurable": {"thread_id": thread_id}}
 
         placeholder = st.empty()
         streamed_text = ""
