@@ -96,6 +96,7 @@ if user_input:
     # If new thread, create only now
     if selected_thread == "+ New Thread":
         thread_id = str(uuid.uuid4())[:8]
+        st.session_state.threads = load_history()
         st.session_state.threads[st.session_state.current_user][thread_id] = []
         st.session_state.active_thread = thread_id
     else:
@@ -113,17 +114,23 @@ if user_input:
         st.markdown(user_input)
 
     # Call model for response
-    model_output = call_my_model(user_input,st.session_state.active_thread)
+    # model_output = call_my_model(user_input,st.session_state.active_thread)
+    placeholder = st.empty()
+    streamed_text = ""
+    for piece in call_my_model(user_input, thread_id):
+        streamed_text += piece
+        placeholder.markdown(streamed_text)
+
 
     # Add assistant message
     st.session_state.threads[st.session_state.current_user][thread_id].append({
         "role": "assistant",
-        "message": model_output,
+        "message": streamed_text,
         "timestamp": datetime.now().isoformat()
     })
-    add_message(st.session_state.current_user,thread_id,"assistant",model_output)
+    add_message(st.session_state.current_user,thread_id,"assistant",streamed_text)
 
     with st.chat_message("assistant"):
-        st.markdown(model_output)
+        st.markdown(streamed_text)
 
     st.rerun()
