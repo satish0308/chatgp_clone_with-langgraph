@@ -73,12 +73,9 @@ def call_my_model(user_input_message,thread_id):
 
             config={"configurable": {"thread_id": thread_id}}
 
-            placeholder = st.empty()
-            streamed_text = ""
-
             for chunk in build.stream(
                 {"input": [HumanMessage(user_input_message)]},
-                config,
+                config=config,
                 context=context,
                 stream_mode="updates",
             ):
@@ -117,7 +114,7 @@ def call_my_model(user_input_message,thread_id):
 
         for chunk in build.stream(
             {"input": [HumanMessage(user_input_message)]},
-            config,
+            config=config,
             context=context,
             stream_mode="updates",
         ):

@@ -31,8 +31,8 @@ st.sidebar.title("💬 ChatGPT Clone")
 
 select_user = st.sidebar.selectbox(
     "Select user name",
-    options=["+ newuser"] + st.session_state.users ,
-)
+    options=["+ newuser"] + st.session_state.users ,)
+    # index=len(st.session_state.users)-1 if len(st.session_state.users) > 1 else 0)
 
 if select_user =="+ newuser":
     name=st.sidebar.text_input("enter new user name: ")
@@ -57,11 +57,14 @@ if len(all_current_user_threads)>0:
 if st.session_state.current_user is not None:
     selected_thread = st.sidebar.selectbox(
         "Select a conversation",
-        options=["+ New Thread"] + all_current_user_threads) 
+        options=["+ New Thread"] + all_current_user_threads,)
+        # index=len(all_current_user_threads)-1 if len(all_current_user_threads) > 1 else 0) 
     
         # If an existing thread is selected, set active_thread
     if selected_thread != "+ New Thread":
         st.session_state.active_thread = selected_thread
+    else:
+        st.sidebar.markdown("New Thread will Get Created")
 else:
     st.sidebar.markdown("please create or select user")
 
@@ -92,7 +95,12 @@ except:
 # User input
 user_input = st.chat_input("Send a message")
 
+st.subheader(f"Current User {st.session_state.current_user}")
+st.subheader(f"Current Thread {st.session_state.active_thread}")
+
 if user_input:
+
+
     # If new thread, create only now
     if selected_thread == "+ New Thread":
         thread_id = str(uuid.uuid4())[:8]
