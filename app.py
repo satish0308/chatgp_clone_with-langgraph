@@ -42,6 +42,7 @@ if select_user =="+ newuser":
         data=load_history()
         data[name]={}
         save_history(data)
+    st.session_state.active_thread=None
 else:
     st.session_state.current_user = select_user
     

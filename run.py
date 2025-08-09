@@ -38,7 +38,7 @@ end_point=os.getenv("NVIDIA_API_ENDPOINT")
 mango_db_password=os.getenv("MONGO_DB_PASSWORD")
 os.environ['NVIDIA_API_KEY']=api_key
 
-mango_db_as_db=False
+mango_db_as_db=True
 
 uri = f"mongodb+srv://hiremath0308:{mango_db_password}@mycluster.ug67j.mongodb.net/?retryWrites=true&w=majority&appName=mycluster"
 conn = sqlite3.connect("checkpoints.sqlite", check_same_thread=False)
@@ -72,17 +72,21 @@ def call_my_model(user_input_message,thread_id):
 
 
             config={"configurable": {"thread_id": thread_id}}
+            placeholder = st.empty()
+            streamed_text = ""
 
             for chunk in build.stream(
                 {"input": [HumanMessage(user_input_message)]},
-                config=config,
+                config,
                 context=context,
                 stream_mode="updates",
             ):
                 # Extract the latest chunk's text
                 text_piece = chunk["call_llm"]["output"][-1].content
-
-                yield text_piece
+                streamed_text += text_piece
+                placeholder.markdown(streamed_text)
+            
+            return streamed_text
     else:   
         checkpointer=SqliteSaver(conn)
         graph=StateGraph(MyState,context_schema=myruntime)
@@ -109,16 +113,20 @@ def call_my_model(user_input_message,thread_id):
 
 
         config={"configurable": {"thread_id": thread_id}}
-
+        print(config)
        
+        placeholder = st.empty()
+        streamed_text = ""
 
         for chunk in build.stream(
             {"input": [HumanMessage(user_input_message)]},
-            config=config,
+            config,
             context=context,
             stream_mode="updates",
         ):
             # Extract the latest chunk's text
             text_piece = chunk["call_llm"]["output"][-1].content
-            
-            yield text_piece
+            streamed_text += text_piece
+            placeholder.markdown(streamed_text)
+        
+        return streamed_text
