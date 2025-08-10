@@ -48,8 +48,6 @@ def get_thread_messages(user_id, thread_id):
 
 from datetime import datetime
 
-from datetime import datetime
-
 def get_latest_thread_for_user(data, user_id):
     if user_id not in data:
         return None, []  # user doesn't exist

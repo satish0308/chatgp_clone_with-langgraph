@@ -1,7 +1,7 @@
 import streamlit as st
 from datetime import datetime
 import uuid
-from run import build,context
+from run import get_check_points
 from my_local_db import add_message,get_thread_messages,load_history,save_history,get_all_users,get_latest_thread_for_user
 from langchain_core.messages import AnyMessage,HumanMessage
 
@@ -97,8 +97,7 @@ except:
 # User input
 user_input = st.chat_input("Send a message")
 
-st.subheader(f"Current User {st.session_state.current_user}")
-st.subheader(f"Current Thread {st.session_state.active_thread}")
+st.write(f"**User:** `{st.session_state.current_user}` | **Thread:** `{st.session_state.active_thread}`")
 
 if user_input:
 
@@ -126,9 +125,20 @@ if user_input:
     # Call model for response
     # model_output = call_my_model(user_input,st.session_state.active_thread)
 
-    config = {"configurable": {"thread_id": "satya"}}
+    config = {"configurable": {"thread_id": thread_id}}
     placeholder = st.empty()
     streamed_text = ""
+
+    # Only call get_check_points and store in session_state if not already stored
+    if "build" not in st.session_state or "checkpointer" not in st.session_state or "context" not in st.session_state:
+        build, checkpointer, context = get_check_points()
+        st.session_state.build = build
+        st.session_state.checkpointer = checkpointer
+        st.session_state.context = context
+    else:
+        build = st.session_state.build
+        checkpointer = st.session_state.checkpointer
+        context = st.session_state.context
 
     for chunk in build.stream(
         {"input": [HumanMessage(user_input)]},
@@ -137,7 +147,7 @@ if user_input:
         stream_mode="updates",resume=True
     ):
         # Extract the latest chunk's text
-        text_piece = chunk["call_llm"]["output"][-1].content
+        text_piece = chunk["call_llm"]["input"][-1].content
         streamed_text += text_piece
         placeholder.markdown(streamed_text)
 

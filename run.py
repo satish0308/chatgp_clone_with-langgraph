@@ -21,7 +21,6 @@ load_dotenv()
 
 class MyState(TypedDict):
     input: Annotated[list[AnyMessage], add_messages]
-    output: Annotated[list[AnyMessage], add_messages]
 
 class myruntime(TypedDict):
     llm_model: str
@@ -46,34 +45,39 @@ uri = f"mongodb+srv://hiremath0308:{mango_db_password}@mycluster.ug67j.mongodb.n
 graph = StateGraph(MyState, context_schema=myruntime)
 
 def call_llm(state: MyState, runtime: Runtime[myruntime]) -> MyState:
-    input_message = state['input'][-1]
+    input_message = state['input']
     llm_model = runtime.context['llm_model']
     end_point = runtime.context['end_point']
 
     model = ChatNVIDIA(model=llm_model, base_url=end_point)
-    response = model.invoke([input_message])
-    return {'output': [response]}
+    response = model.invoke(input_message)
+    return {'input': [response]}
 
 graph.add_node("call_llm", call_llm)
 graph.add_edge(START, "call_llm")
 graph.add_edge("call_llm", END)
 
-context = {
-            "llm_model": llm_model,
-            "api_key": api_key,
-            "end_point": end_point
-            }
+
 # if mango_db_as_db:
 #     # with MongoDBSaver.from_conn_string(uri) as checkpointer:
 #     #     build = graph.compile(checkpointer=checkpointer)
 #     checkpointer = MongoDBSaver.from_conn_string(uri)       
 
+@st.cache_resource
+def get_check_points():
 
-conn = sqlite3.connect("checkpoints_2.db", check_same_thread=False)
+    context = {
+            "llm_model": llm_model,
+            "api_key": api_key,
+            "end_point": end_point
+            }
+    
+    conn = sqlite3.connect("checkpoints_2.db", check_same_thread=False)
+    checkpointer = SqliteSaver(conn)
+    print("has get method?", hasattr(checkpointer, "get"))
 
-checkpointer = SqliteSaver(conn)
-print("has get method?", hasattr(checkpointer, "get"))
+    print(checkpointer.get({"configurable": {"thread_id": "satya"}}))
+    build = graph.compile(checkpointer=checkpointer)
+    print(checkpointer.get({"configurable": {"thread_id": "satya"}}))
 
-print(checkpointer.get({"configurable": {"thread_id": "satya"}}))
-build = graph.compile(checkpointer=checkpointer)
-print(checkpointer.get({"configurable": {"thread_id": "satya"}}))
+    return build,checkpointer,context
