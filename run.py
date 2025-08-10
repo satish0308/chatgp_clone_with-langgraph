@@ -30,103 +30,50 @@ class myruntime(TypedDict):
 
 # checkpointer=InMemorySaver()
 
-
-
 api_key=os.getenv("NVIDIA_API_KEY")
 llm_model=os.getenv("NVIDIA_MODEL_2")
 end_point=os.getenv("NVIDIA_API_ENDPOINT")
 mango_db_password=os.getenv("MONGO_DB_PASSWORD")
 os.environ['NVIDIA_API_KEY']=api_key
 
-mango_db_as_db=True
+mango_db_as_db=False
 
 uri = f"mongodb+srv://hiremath0308:{mango_db_password}@mycluster.ug67j.mongodb.net/?retryWrites=true&w=majority&appName=mycluster"
-conn = sqlite3.connect("checkpoints.sqlite", check_same_thread=False)
-
-def call_my_model(user_input_message,thread_id):
-
-    if mango_db_as_db:
-
-        with MongoDBSaver.from_conn_string(uri) as checkpointer:
-            graph=StateGraph(MyState,context_schema=myruntime)
-            def call_llm(state:MyState,runtime:Runtime[myruntime]) -> MyState:
-                input_message = state['input'][-1]
-
-                llm_model= runtime.context['llm_model']
-                # api_key= runtime.context['api_key']
-                end_point= runtime.context['end_point']
-                # Here you would call your LLM with the input_message
-                model = ChatNVIDIA(model=llm_model,base_url=end_point)
-                response = model.invoke([input_message])
-
-                return {'output': [response]}
-
-            graph.add_node("call_llm",call_llm)
-            graph.add_edge(START,"call_llm")
-            graph.add_edge("call_llm",END)
-            build=graph.compile(checkpointer=checkpointer)
-
-            context={"llm_model": llm_model,
-                    "api_key": api_key,
-                    "end_point": end_point}
 
 
-            config={"configurable": {"thread_id": thread_id}}
-            placeholder = st.empty()
-            streamed_text = ""
 
-            for chunk in build.stream(
-                {"input": [HumanMessage(user_input_message)]},
-                config,
-                context=context,
-                stream_mode="updates",
-            ):
-                # Extract the latest chunk's text
-                text_piece = chunk["call_llm"]["output"][-1].content
-                streamed_text += text_piece
-                placeholder.markdown(streamed_text)
-            
-            return streamed_text
-    else:   
-        checkpointer=SqliteSaver(conn)
-        graph=StateGraph(MyState,context_schema=myruntime)
-        def call_llm(state:MyState,runtime:Runtime[myruntime]) -> MyState:
-            input_message = state['input'][-1]
+# Build graph once
+graph = StateGraph(MyState, context_schema=myruntime)
 
-            llm_model= runtime.context['llm_model']
-            # api_key= runtime.context['api_key']
-            end_point= runtime.context['end_point']
-            # Here you would call your LLM with the input_message
-            model = ChatNVIDIA(model=llm_model,base_url=end_point)
-            response = model.invoke([input_message])
+def call_llm(state: MyState, runtime: Runtime[myruntime]) -> MyState:
+    input_message = state['input'][-1]
+    llm_model = runtime.context['llm_model']
+    end_point = runtime.context['end_point']
 
-            return {'output': [response]}
+    model = ChatNVIDIA(model=llm_model, base_url=end_point)
+    response = model.invoke([input_message])
+    return {'output': [response]}
 
-        graph.add_node("call_llm",call_llm)
-        graph.add_edge(START,"call_llm")
-        graph.add_edge("call_llm",END)
-        build=graph.compile(checkpointer=checkpointer)
+graph.add_node("call_llm", call_llm)
+graph.add_edge(START, "call_llm")
+graph.add_edge("call_llm", END)
 
-        context={"llm_model": llm_model,
-                "api_key": api_key,
-                "end_point": end_point}
+context = {
+            "llm_model": llm_model,
+            "api_key": api_key,
+            "end_point": end_point
+            }
+# if mango_db_as_db:
+#     # with MongoDBSaver.from_conn_string(uri) as checkpointer:
+#     #     build = graph.compile(checkpointer=checkpointer)
+#     checkpointer = MongoDBSaver.from_conn_string(uri)       
 
 
-        config={"configurable": {"thread_id": thread_id}}
-        print(config)
-       
-        placeholder = st.empty()
-        streamed_text = ""
+conn = sqlite3.connect("checkpoints_2.db", check_same_thread=False)
 
-        for chunk in build.stream(
-            {"input": [HumanMessage(user_input_message)]},
-            config,
-            context=context,
-            stream_mode="updates",
-        ):
-            # Extract the latest chunk's text
-            text_piece = chunk["call_llm"]["output"][-1].content
-            streamed_text += text_piece
-            placeholder.markdown(streamed_text)
-        
-        return streamed_text
+checkpointer = SqliteSaver(conn)
+print("has get method?", hasattr(checkpointer, "get"))
+
+print(checkpointer.get({"configurable": {"thread_id": "satya"}}))
+build = graph.compile(checkpointer=checkpointer)
+print(checkpointer.get({"configurable": {"thread_id": "satya"}}))

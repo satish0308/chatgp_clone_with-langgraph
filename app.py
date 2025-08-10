@@ -1,8 +1,9 @@
 import streamlit as st
 from datetime import datetime
 import uuid
-from run import call_my_model
+from run import build,context
 from my_local_db import add_message,get_thread_messages,load_history,save_history,get_all_users,get_latest_thread_for_user
+from langchain_core.messages import AnyMessage,HumanMessage
 
 # ---------- Initialization ----------
 if "threads" not in st.session_state:
@@ -124,12 +125,25 @@ if user_input:
 
     # Call model for response
     # model_output = call_my_model(user_input,st.session_state.active_thread)
+
+    config = {"configurable": {"thread_id": "satya"}}
     placeholder = st.empty()
     streamed_text = ""
-    for piece in call_my_model(user_input, thread_id):
-        streamed_text += piece
+
+    for chunk in build.stream(
+        {"input": [HumanMessage(user_input)]},
+        config,
+        context=context,
+        stream_mode="updates",resume=True
+    ):
+        # Extract the latest chunk's text
+        text_piece = chunk["call_llm"]["output"][-1].content
+        streamed_text += text_piece
         placeholder.markdown(streamed_text)
 
+    print(config)
+    print(user_input)
+    print(streamed_text)
 
     # Add assistant message
     st.session_state.threads[st.session_state.current_user][thread_id].append({
